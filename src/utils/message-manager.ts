@@ -10,17 +10,11 @@ import {
   TimeoutError,
 } from '../types';
 
-/**
- * STEP 6: MESSAGE MANAGEMENT
- *
- * Handles message creation, validation, and request/response patterns
- */
-
 export class MessageManager {
   private pendingRequests: Map<
     string,
     {
-      resolve: (value: any) => void;
+      resolve: (value: unknown) => void;
       reject: (error: Error) => void;
       timeout: NodeJS.Timeout;
     }
@@ -32,18 +26,9 @@ export class MessageManager {
     this.debug = debug;
   }
 
-  /**
-   * Creates a new message with required fields
-   *
-   * @param type - Message type
-   * @param payload - Message payload (optional)
-   * @param origin - Sender's origin
-   * @param targetOrigin - Target origin
-   * @returns Formatted message
-   */
   createMessage(
     type: string,
-    payload?: any,
+    payload?: unknown,
     origin: string = window.location.origin,
     targetOrigin: string = '*'
   ): MessageWithPayload {
@@ -63,19 +48,10 @@ export class MessageManager {
     return message;
   }
 
-  /**
-   * Creates a response message
-   *
-   * @param originalMessage - The message being responded to
-   * @param success - Whether the operation was successful
-   * @param payload - Response payload (optional)
-   * @param error - Error message if unsuccessful
-   * @returns Formatted response message
-   */
   createResponse(
     originalMessage: MessageWithPayload,
     success: boolean,
-    payload?: any,
+    payload?: unknown,
     error?: string
   ): ResponseMessage {
     const response: ResponseMessage = {
@@ -97,14 +73,7 @@ export class MessageManager {
     return response;
   }
 
-  /**
-   * Validates an incoming message against schema
-   *
-   * @param data - Raw message data
-   * @returns Validated message
-   * @throws ValidationError if validation fails
-   */
-  validateMessage(data: any): MessageWithPayload {
+  validateMessage(data: unknown): MessageWithPayload {
     try {
       return MessageWithPayloadSchema.parse(data);
     } catch (error) {
@@ -112,14 +81,7 @@ export class MessageManager {
     }
   }
 
-  /**
-   * Validates an incoming response message
-   *
-   * @param data - Raw response data
-   * @returns Validated response
-   * @throws ValidationError if validation fails
-   */
-  validateResponse(data: any): ResponseMessage {
+  validateResponse(data: unknown): ResponseMessage {
     try {
       return ResponseMessageSchema.parse(data);
     } catch (error) {
@@ -127,15 +89,8 @@ export class MessageManager {
     }
   }
 
-  /**
-   * Registers a pending request and returns a promise
-   *
-   * @param messageId - ID of the message
-   * @param timeoutMs - Timeout in milliseconds
-   * @returns Promise that resolves with the response
-   */
   registerPendingRequest<T>(messageId: string, timeoutMs: number): Promise<T> {
-    return new Promise((resolve, reject) => {
+    return new Promise<T>((resolve, reject) => {
       const timeout = setTimeout(() => {
         this.pendingRequests.delete(messageId);
         reject(
@@ -146,7 +101,7 @@ export class MessageManager {
       }, timeoutMs);
 
       this.pendingRequests.set(messageId, {
-        resolve,
+        resolve: resolve as (value: unknown) => void,
         reject,
         timeout,
       });
@@ -157,11 +112,6 @@ export class MessageManager {
     });
   }
 
-  /**
-   * Resolves a pending request
-   *
-   * @param response - The response message
-   */
   resolvePendingRequest(response: ResponseMessage): void {
     const pending = this.pendingRequests.get(response.responseId);
 
@@ -178,7 +128,7 @@ export class MessageManager {
     this.pendingRequests.delete(response.responseId);
 
     if (response.success) {
-      pending.resolve(response.payload);
+      pending.resolve(response.payload as unknown);
     } else {
       pending.reject(new Error(response.error || 'Request failed'));
     }
@@ -190,11 +140,5 @@ export class MessageManager {
     }
   }
 
-  /**
-   * Cleans up expired requests
-   */
-  cleanup(): void {
-    // This would typically be called periodically to clean up any hanging requests
-    // For now, we rely on individual timeouts
-  }
+  cleanup(): void {}
 }

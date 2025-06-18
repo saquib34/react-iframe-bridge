@@ -1,24 +1,28 @@
 module.exports = {
+  root: true,
   parser: '@typescript-eslint/parser',
   parserOptions: {
-    ecmaVersion: 2020,
+    ecmaVersion: 'latest',
     sourceType: 'module',
     ecmaFeatures: {
       jsx: true
     }
   },
-  plugins: ['@typescript-eslint'],
+  plugins: ['@typescript-eslint', 'react', 'react-hooks'],
   extends: [
     'eslint:recommended',
-    '@typescript-eslint/recommended'
+    'plugin:@typescript-eslint/recommended',
+    'plugin:react/recommended',
+    'plugin:react-hooks/recommended'
   ],
   rules: {
-    '@typescript-eslint/no-explicit-any': 'warn',
-    '@typescript-eslint/no-unused-vars': 'error'
+    // You can add custom rules here
+    'react/react-in-jsx-scope': 'off', // not needed in React 17+
+    '@typescript-eslint/no-unused-vars': ['warn']
   },
-  env: {
-    browser: true,
-    es6: true,
-    node: true
+  settings: {
+    react: {
+      version: 'detect'
+    }
   }
-};
+}

@@ -1,4 +1,4 @@
-// src/hooks/useParentCommunication.ts - TYPE FIXES
+// src/hooks/useParentCommunication.ts
 import { useEffect, useRef, useCallback, useState } from 'react';
 import {
   ParentCommunicationHook,
@@ -8,12 +8,6 @@ import {
 } from '../types';
 import { SecurityManager } from '../utils/security';
 import { MessageManager } from '../utils/message-manager';
-
-/**
- * STEP 7: PARENT COMMUNICATION HOOK 
- *
- * This hook is used by the parent component to communicate with iframe children
- */
 
 const DEFAULT_CONFIG: Required<CommunicationConfig> = {
   timeout: 5000,
@@ -27,18 +21,13 @@ export function useParentCommunication(
   iframeRef: React.RefObject<HTMLIFrameElement | null> | React.RefObject<HTMLIFrameElement>,
   config: IframeBridgeConfig
 ): ParentCommunicationHook {
-  // State management
   const [isConnected, setIsConnected] = useState(false);
   const [lastError, setLastError] = useState<Error | null>(null);
-
-  // Utilities
   const securityManager = useRef(new SecurityManager(config));
   const messageManager = useRef(
     new MessageManager(config.communication?.debug)
   );
   const eventListeners = useRef(new Map<string, Set<Function>>());
-
-  // Merge config with defaults
   const commConfig = { ...DEFAULT_CONFIG, ...config.communication };
 
   /**

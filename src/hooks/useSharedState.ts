@@ -11,11 +11,11 @@ import { IframeBridgeConfig } from '../types';
  */
 
 interface UseSharedStateOptions<T> {
-  key: string; // Unique identifier for this shared state
+  key: string;
   defaultValue: T;
-  isParent: boolean; // Whether this component is the parent or child
+  isParent: boolean;
   config: IframeBridgeConfig;
-  iframeRef?: React.RefObject<HTMLIFrameElement | null>; // Required for parent
+  iframeRef?: React.RefObject<HTMLIFrameElement | null>;
 }
 
 interface SharedStateHook<T> {
@@ -44,13 +44,12 @@ export function useSharedState<T>({
   const isInitialized = useRef(false);
   const lastUpdateTime = useRef<number>(0);
 
-  // ✅ FIX: Get the appropriate communication hook based on isParent
   const parentComm =
     isParent && iframeRef ? useParentCommunication(iframeRef, config) : null;
   const childComm = !isParent ? useChildCommunication(config) : null;
 
   /**
-   * ✅ FIX: Updates local value and syncs with other side
+   * Updates local value and syncs with other side
    */
   const setValue = useCallback(
     (newValue: T | ((prev: T) => T)) => {
@@ -71,7 +70,6 @@ export function useSharedState<T>({
         key,
       };
 
-      // ✅ FIX: Use the correct communication hook based on isParent
       if (isParent && parentComm) {
         parentComm.sendToChild(messageType, messagePayload).catch((err) => {
           setError(err);
@@ -88,7 +86,7 @@ export function useSharedState<T>({
   );
 
   /**
-   * ✅ FIX: Request initial state from the other side
+   * Request initial state from the other side
    */
   const requestInitialState = useCallback(async () => {
     if (isInitialized.current) return;
@@ -97,13 +95,14 @@ export function useSharedState<T>({
 
     try {
       const messageType = `SHARED_STATE_REQUEST_${key.toUpperCase()}`;
-      let response;
+      let response: { value?: T };
 
-      // ✅ FIX: Use the correct communication hook
       if (isParent && parentComm) {
         response = await parentComm.requestFromChild(messageType, { key });
       } else if (!isParent && childComm) {
         response = await childComm.requestFromParent(messageType, { key });
+      } else {
+        response = {};
       }
 
       if (response && typeof response.value !== 'undefined') {
@@ -114,7 +113,6 @@ export function useSharedState<T>({
       isInitialized.current = true;
       setError(null);
     } catch (err) {
-      // If request fails, use default value
       console.warn(
         `[SharedState] Could not get initial state for ${key}, using default`
       );
@@ -125,7 +123,7 @@ export function useSharedState<T>({
   }, [parentComm, childComm, isParent, key]);
 
   /**
-   * ✅ FIX: Handle incoming state updates
+   * Handle incoming state updates
    */
   useEffect(() => {
     const currentComm = isParent ? parentComm : childComm;
@@ -151,7 +149,7 @@ export function useSharedState<T>({
     const unsubscribeRequest = currentComm.onMessage(
       requestMessageType,
       (payload: { key: string }, message) => {
-        // ✅ FIX: Use the correct respond method based on isParent
+        // Use the correct respond method based on isParent
         if (isParent && parentComm) {
           parentComm.respondToChild(message, true, { value, key });
         } else if (!isParent && childComm) {
@@ -167,7 +165,7 @@ export function useSharedState<T>({
   }, [parentComm, childComm, isParent, key, value]);
 
   /**
-   * ✅ FIX: Initialize state on mount
+   * Initialize state on mount
    */
   useEffect(() => {
     const currentComm = isParent ? parentComm : childComm;
@@ -263,7 +261,7 @@ export function useSharedStateV2<T>({
     isParent && iframeRef ? useParentCommunication(iframeRef, config) : null;
   const childComm = !isParent ? useChildCommunication(config) : null;
 
-  // ✅ Create unified communication interface
+  // Create unified communication interface
   const communication = createUnifiedCommunication(
     isParent,
     parentComm,

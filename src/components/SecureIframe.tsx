@@ -1,21 +1,13 @@
-// src/components/SecureIframe.tsx - FIXED VERSION
 import * as React from 'react';
 import { useRef, useEffect, forwardRef, useImperativeHandle, useCallback, useMemo } from 'react';
 import { useParentCommunication } from '../hooks/useParentCommunication';
 import { IframeBridgeConfig, ParentCommunicationHook } from '../types';
 
-/**
- * STEP 10: SECURE IFRAME COMPONENT (FIXED)
- *
- * A React component that wraps an iframe with built-in communication capabilities
- */
-
-// ✅ FIX 1: Separate props to avoid conflict with native onError
 interface SecureIframeProps
   extends Omit<React.IframeHTMLAttributes<HTMLIFrameElement>, 'onError'> {
   config: IframeBridgeConfig;
   onReady?: () => void;
-  onError?: (error: Error) => void; // Custom error handler, not the native iframe onError
+  onError?: (error: Error) => void;
   onMessage?: (type: string, payload: any) => void;
 }
 
@@ -24,15 +16,9 @@ export interface SecureIframeRef {
   iframe: HTMLIFrameElement | null;
 }
 
-/**
- * Secure iframe component with built-in communication
- */
 export const SecureIframe = forwardRef<SecureIframeRef, SecureIframeProps>(
   ({ config, onReady, onError, style, ...iframeProps }, ref) => {
-    // ✅ FIX 2: Use correct ref type that matches useParentCommunication expectation
     const iframeRef = useRef<HTMLIFrameElement>(null);
-    
-    // ✅ FIXED: Memoize config to prevent hook recreation
     const memoizedConfig = useMemo(() => config, [
       config.allowedOrigins,
       config.communication?.debug,
@@ -40,9 +26,7 @@ export const SecureIframe = forwardRef<SecureIframeRef, SecureIframeProps>(
       config.communication?.retryAttempts,
       config.communication?.retryDelay
     ]);
-    
     const communication = useParentCommunication(iframeRef, memoizedConfig);
-
     useImperativeHandle(
       ref,
       () => ({
@@ -51,32 +35,24 @@ export const SecureIframe = forwardRef<SecureIframeRef, SecureIframeProps>(
       }),
       [communication]
     );
-
-    // ✅ FIXED: Memoize callbacks to prevent infinite effects
     const handleReady = useCallback((payload: any) => {
       if (memoizedConfig.communication?.debug) {
         console.log('[SecureIframe] Child iframe is ready:', payload);
       }
       onReady?.();
     }, [memoizedConfig.communication?.debug, onReady]);
-
     const handleError = useCallback(() => {
       if (communication.lastError) {
         onError?.(communication.lastError);
       }
     }, [communication.lastError, onError]);
-
-    // Handle iframe ready signal
     useEffect(() => {
       const unsubscribe = communication.onMessage('IFRAME_READY', handleReady);
       return unsubscribe;
-    }, [communication, handleReady]); // ✅ Now stable dependencies
-
-    // Handle errors
+    }, [communication, handleReady]);
     useEffect(() => {
       handleError();
     }, [handleError]);
-
     return (
       <iframe
         ref={iframeRef}
@@ -95,14 +71,13 @@ export const SecureIframe = forwardRef<SecureIframeRef, SecureIframeProps>(
 
 SecureIframe.displayName = 'SecureIframe';
 
-// ✅ ALTERNATIVE: If you need the native iframe onError as well
 interface SecureIframePropsWithNativeError
   extends Omit<React.IframeHTMLAttributes<HTMLIFrameElement>, 'onError'> {
   config: IframeBridgeConfig;
   onReady?: () => void;
-  onCommunicationError?: (error: Error) => void; // Renamed to avoid conflict
+  onCommunicationError?: (error: Error) => void;
   onMessage?: (type: string, payload: any) => void;
-  onError?: React.ReactEventHandler<HTMLIFrameElement>; // Native iframe error handler
+  onError?: React.ReactEventHandler<HTMLIFrameElement>;
 }
 
 export const SecureIframeV2 = forwardRef<
@@ -114,8 +89,6 @@ export const SecureIframeV2 = forwardRef<
     ref
   ) => {
     const iframeRef = useRef<HTMLIFrameElement>(null);
-    
-    // ✅ FIXED: Memoize config to prevent hook recreation
     const memoizedConfig = useMemo(() => config, [
       config.allowedOrigins,
       config.communication?.debug,
@@ -123,9 +96,7 @@ export const SecureIframeV2 = forwardRef<
       config.communication?.retryAttempts,
       config.communication?.retryDelay
     ]);
-    
     const communication = useParentCommunication(iframeRef, memoizedConfig);
-
     useImperativeHandle(
       ref,
       () => ({
@@ -134,32 +105,24 @@ export const SecureIframeV2 = forwardRef<
       }),
       [communication]
     );
-
-    // ✅ FIXED: Memoize callbacks to prevent infinite effects
     const handleReady = useCallback((payload: any) => {
       if (memoizedConfig.communication?.debug) {
         console.log('[SecureIframe] Child iframe is ready:', payload);
       }
       onReady?.();
     }, [memoizedConfig.communication?.debug, onReady]);
-
     const handleCommunicationError = useCallback(() => {
       if (communication.lastError) {
         onCommunicationError?.(communication.lastError);
       }
     }, [communication.lastError, onCommunicationError]);
-
-    // Handle iframe ready signal
     useEffect(() => {
       const unsubscribe = communication.onMessage('IFRAME_READY', handleReady);
       return unsubscribe;
-    }, [communication, handleReady]); // ✅ Now stable dependencies
-
-    // Handle communication errors
+    }, [communication, handleReady]);
     useEffect(() => {
       handleCommunicationError();
     }, [handleCommunicationError]);
-
     return (
       <iframe
         ref={iframeRef}
@@ -170,7 +133,7 @@ export const SecureIframeV2 = forwardRef<
           ...style,
         }}
         sandbox="allow-scripts allow-same-origin allow-forms"
-        onError={onError} // Native iframe error handler
+        onError={onError}
         {...iframeProps}
       />
     );

@@ -9,13 +9,6 @@ import {
 import { SecurityManager } from '../utils/security';
 import { MessageManager } from '../utils/message-manager';
 
-/**
- * STEP 8: CHILD COMMUNICATION HOOK
- *
- * This hook is used by components running inside iframes to communicate with their parent
- */
-
-// ✅ FIX: Add the missing DEFAULT_CONFIG
 const DEFAULT_CONFIG: Required<CommunicationConfig> = {
   timeout: 5000,
   retryAttempts: 3,
@@ -26,18 +19,13 @@ const DEFAULT_CONFIG: Required<CommunicationConfig> = {
 export function useChildCommunication(
   config: IframeBridgeConfig
 ): ChildCommunicationHook {
-  // State management
   const [isConnected, setIsConnected] = useState(false);
   const [lastError, setLastError] = useState<Error | null>(null);
-
-  // Utilities
   const securityManager = useRef(new SecurityManager(config));
   const messageManager = useRef(
     new MessageManager(config.communication?.debug)
   );
   const eventListeners = useRef(new Map<string, Set<Function>>());
-
-  // Merge config with defaults
   const commConfig = { ...DEFAULT_CONFIG, ...config.communication };
 
   /**
