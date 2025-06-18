@@ -1,5 +1,5 @@
 {
-  "name": "react-iframe-bridge",
+  "name": "iframes",
   "version": "1.0.0",
   "description": "A React library for secure bidirectional communication between parent pages and iframe children",
   "main": "dist/index.js",
