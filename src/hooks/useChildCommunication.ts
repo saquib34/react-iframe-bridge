@@ -16,6 +16,8 @@ const DEFAULT_CONFIG: Required<CommunicationConfig> = {
   debug: false,
 };
 
+type MessageHandler = (payload: unknown, message: MessageWithPayload) => void;
+
 export function useChildCommunication(
   config: IframeBridgeConfig
 ): ChildCommunicationHook {
@@ -25,7 +27,7 @@ export function useChildCommunication(
   const messageManager = useRef(
     new MessageManager(config.communication?.debug)
   );
-  const eventListeners = useRef(new Map<string, Set<Function>>());
+  const eventListeners = useRef(new Map<string, Set<MessageHandler>>());
   const commConfig = { ...DEFAULT_CONFIG, ...config.communication };
 
   /**
@@ -43,7 +45,7 @@ export function useChildCommunication(
    * Sends a message to the parent window
    */
   const sendToParent = useCallback(
-    async <T = any>(type: string, payload?: T): Promise<void> => {
+    async <T = unknown>(type: string, payload?: T): Promise<void> => {
       try {
         if (!isInIframe()) {
           throw new Error('Not running in an iframe');
@@ -79,7 +81,7 @@ export function useChildCommunication(
    * Sends a request to parent and waits for response
    */
   const requestFromParent = useCallback(
-    async <T = any, R = any>(type: string, payload?: T): Promise<R> => {
+    async <T = unknown, R = unknown>(type: string, payload?: T): Promise<R> => {
       try {
         if (!isInIframe()) {
           throw new Error('Not running in an iframe');
@@ -122,15 +124,16 @@ export function useChildCommunication(
    * Subscribe to messages from parent
    */
   const onMessage = useCallback(
-    <T = any>(
+    <T = unknown>(
       type: string,
       handler: (payload: T, message: MessageWithPayload) => void
     ): (() => void) => {
+      const typedHandler: MessageHandler = handler as MessageHandler;
       if (!eventListeners.current.has(type)) {
         eventListeners.current.set(type, new Set());
       }
 
-      eventListeners.current.get(type)!.add(handler);
+      eventListeners.current.get(type)!.add(typedHandler);
 
       if (commConfig.debug) {
         console.log(`[IframeBridge Child] Registered listener for: ${type}`);
@@ -140,7 +143,7 @@ export function useChildCommunication(
       return () => {
         const listeners = eventListeners.current.get(type);
         if (listeners) {
-          listeners.delete(handler);
+          listeners.delete(typedHandler);
           if (listeners.size === 0) {
             eventListeners.current.delete(type);
           }
@@ -157,7 +160,7 @@ export function useChildCommunication(
     (
       originalMessage: MessageWithPayload,
       success: boolean,
-      payload?: any,
+      payload?: unknown,
       error?: string
     ) => {
       try {
@@ -226,7 +229,7 @@ export function useChildCommunication(
         if (listeners && listeners.size > 0) {
           listeners.forEach((handler) => {
             try {
-              (handler as Function)(message.payload, message);
+              handler(message.payload, message);
             } catch (error) {
               console.error(
                 '[IframeBridge Child] Error in message handler:',
@@ -255,6 +258,7 @@ export function useChildCommunication(
   useEffect(() => {
     // Add message listener
     window.addEventListener('message', handleMessage);
+    const localListeners = eventListeners.current;
 
     // Check connection status
     const checkConnection = () => {
@@ -274,7 +278,7 @@ export function useChildCommunication(
     return () => {
       window.removeEventListener('message', handleMessage);
       clearInterval(interval);
-      eventListeners.current.clear();
+      localListeners.clear();
     };
   }, [handleMessage, isInIframe, signalReady]);
 

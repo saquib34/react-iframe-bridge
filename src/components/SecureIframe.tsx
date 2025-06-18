@@ -8,7 +8,7 @@ interface SecureIframeProps
   config: IframeBridgeConfig;
   onReady?: () => void;
   onError?: (error: Error) => void;
-  onMessage?: (type: string, payload: any) => void;
+  onMessage?: (type: string, payload: unknown) => void;
 }
 
 export interface SecureIframeRef {
@@ -19,13 +19,7 @@ export interface SecureIframeRef {
 export const SecureIframe = forwardRef<SecureIframeRef, SecureIframeProps>(
   ({ config, onReady, onError, style, ...iframeProps }, ref) => {
     const iframeRef = useRef<HTMLIFrameElement>(null);
-    const memoizedConfig = useMemo(() => config, [
-      config.allowedOrigins,
-      config.communication?.debug,
-      config.communication?.timeout,
-      config.communication?.retryAttempts,
-      config.communication?.retryDelay
-    ]);
+    const memoizedConfig = useMemo(() => config, [config]);
     const communication = useParentCommunication(iframeRef, memoizedConfig);
     useImperativeHandle(
       ref,
@@ -35,7 +29,7 @@ export const SecureIframe = forwardRef<SecureIframeRef, SecureIframeProps>(
       }),
       [communication]
     );
-    const handleReady = useCallback((payload: any) => {
+    const handleReady = useCallback((payload: unknown) => {
       if (memoizedConfig.communication?.debug) {
         console.log('[SecureIframe] Child iframe is ready:', payload);
       }
@@ -76,7 +70,7 @@ interface SecureIframePropsWithNativeError
   config: IframeBridgeConfig;
   onReady?: () => void;
   onCommunicationError?: (error: Error) => void;
-  onMessage?: (type: string, payload: any) => void;
+  onMessage?: (type: string, payload: unknown) => void;
   onError?: React.ReactEventHandler<HTMLIFrameElement>;
 }
 
@@ -89,13 +83,7 @@ export const SecureIframeV2 = forwardRef<
     ref
   ) => {
     const iframeRef = useRef<HTMLIFrameElement>(null);
-    const memoizedConfig = useMemo(() => config, [
-      config.allowedOrigins,
-      config.communication?.debug,
-      config.communication?.timeout,
-      config.communication?.retryAttempts,
-      config.communication?.retryDelay
-    ]);
+    const memoizedConfig = useMemo(() => config, [config]);
     const communication = useParentCommunication(iframeRef, memoizedConfig);
     useImperativeHandle(
       ref,
@@ -105,7 +93,7 @@ export const SecureIframeV2 = forwardRef<
       }),
       [communication]
     );
-    const handleReady = useCallback((payload: any) => {
+    const handleReady = useCallback((payload: unknown) => {
       if (memoizedConfig.communication?.debug) {
         console.log('[SecureIframe] Child iframe is ready:', payload);
       }

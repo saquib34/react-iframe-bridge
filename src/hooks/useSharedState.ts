@@ -2,7 +2,11 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useParentCommunication } from './useParentCommunication';
 import { useChildCommunication } from './useChildCommunication';
-import { IframeBridgeConfig } from '../types';
+import { IframeBridgeConfig, MessageWithPayload } from '../types';
+
+function hasValueProp<T>(obj: unknown): obj is { value: T } {
+  return typeof obj === 'object' && obj !== null && 'value' in obj;
+}
 
 /**
  * STEP 11: SHARED STATE HOOK (FIXED)
@@ -44,9 +48,12 @@ export function useSharedState<T>({
   const isInitialized = useRef(false);
   const lastUpdateTime = useRef<number>(0);
 
-  const parentComm =
-    isParent && iframeRef ? useParentCommunication(iframeRef, config) : null;
-  const childComm = !isParent ? useChildCommunication(config) : null;
+  // Always call both hooks at the top level
+  const parentComm = useParentCommunication(
+    (iframeRef ?? { current: null }) as React.RefObject<HTMLIFrameElement | null>,
+    config
+  );
+  const childComm = useChildCommunication(config);
 
   /**
    * Updates local value and syncs with other side
@@ -105,7 +112,7 @@ export function useSharedState<T>({
         response = {};
       }
 
-      if (response && typeof response.value !== 'undefined') {
+      if (hasValueProp<T>(response)) {
         setLocalValue(response.value);
         setLastSync(Date.now());
       }
@@ -127,41 +134,41 @@ export function useSharedState<T>({
    */
   useEffect(() => {
     const currentComm = isParent ? parentComm : childComm;
-    if (!currentComm) return;
+    if (currentComm) {
+      const updateMessageType = `SHARED_STATE_UPDATE_${key.toUpperCase()}`;
+      const requestMessageType = `SHARED_STATE_REQUEST_${key.toUpperCase()}`;
 
-    const updateMessageType = `SHARED_STATE_UPDATE_${key.toUpperCase()}`;
-    const requestMessageType = `SHARED_STATE_REQUEST_${key.toUpperCase()}`;
-
-    // Handle state updates from other side
-    const unsubscribeUpdate = currentComm.onMessage(
-      updateMessageType,
-      (payload: { value: T; timestamp: number; key: string }) => {
-        // Only update if this update is newer than our last update
-        if (payload.timestamp > lastUpdateTime.current) {
-          setLocalValue(payload.value);
-          setLastSync(Date.now());
-          lastUpdateTime.current = payload.timestamp;
+      // Handle state updates from other side
+      const unsubscribeUpdate = currentComm.onMessage(
+        updateMessageType,
+        (payload: { value: T; timestamp: number; key: string }) => {
+          // Only update if this update is newer than our last update
+          if (payload.timestamp > lastUpdateTime.current) {
+            setLocalValue(payload.value);
+            setLastSync(Date.now());
+            lastUpdateTime.current = payload.timestamp;
+          }
         }
-      }
-    );
+      );
 
-    // Handle requests for current state
-    const unsubscribeRequest = currentComm.onMessage(
-      requestMessageType,
-      (payload: { key: string }, message) => {
-        // Use the correct respond method based on isParent
-        if (isParent && parentComm) {
-          parentComm.respondToChild(message, true, { value, key });
-        } else if (!isParent && childComm) {
-          childComm.respondToParent(message, true, { value, key });
+      // Handle requests for current state
+      const unsubscribeRequest = currentComm.onMessage(
+        requestMessageType,
+        (payload: { key: string }, message) => {
+          // Use the correct respond method based on isParent
+          if (isParent && parentComm) {
+            parentComm.respondToChild(message, true, { value, key });
+          } else if (!isParent && childComm) {
+            childComm.respondToParent(message, true, { value, key });
+          }
         }
-      }
-    );
+      );
 
-    return () => {
-      unsubscribeUpdate();
-      unsubscribeRequest();
-    };
+      return () => {
+        unsubscribeUpdate();
+        unsubscribeRequest();
+      };
+    }
   }, [parentComm, childComm, isParent, key, value]);
 
   /**
@@ -192,16 +199,16 @@ export function useSharedState<T>({
 // This approach creates a common interface that both hooks can use
 
 interface UnifiedCommunication {
-  sendMessage: (type: string, payload?: any) => Promise<void>;
-  requestMessage: <R = any>(type: string, payload?: any) => Promise<R>;
-  onMessage: <T = any>(
+  sendMessage: (type: string, payload?: unknown) => Promise<void>;
+  requestMessage: <R = unknown>(type: string, payload?: unknown) => Promise<R>;
+  onMessage: <T = unknown>(
     type: string,
-    handler: (payload: T, message: any) => void
+    handler: (payload: T, message: unknown) => void
   ) => () => void;
   respondToMessage: (
-    originalMessage: any,
+    originalMessage: unknown,
     success: boolean,
-    payload?: any,
+    payload?: unknown,
     error?: string
   ) => void;
   isConnected: boolean;
@@ -221,7 +228,14 @@ function createUnifiedCommunication(
       sendMessage: parentComm.sendToChild,
       requestMessage: parentComm.requestFromChild,
       onMessage: parentComm.onMessage,
-      respondToMessage: parentComm.respondToChild,
+      respondToMessage: (originalMessage, success, payload, error) => {
+        parentComm.respondToChild(
+          originalMessage as MessageWithPayload,
+          success,
+          payload,
+          error
+        );
+      },
       isConnected: parentComm.isConnected,
       lastError: parentComm.lastError,
     };
@@ -230,7 +244,14 @@ function createUnifiedCommunication(
       sendMessage: childComm.sendToParent,
       requestMessage: childComm.requestFromParent,
       onMessage: childComm.onMessage,
-      respondToMessage: childComm.respondToParent,
+      respondToMessage: (originalMessage, success, payload, error) => {
+        childComm.respondToParent(
+          originalMessage as MessageWithPayload,
+          success,
+          payload,
+          error
+        );
+      },
       isConnected: childComm.isConnected,
       lastError: childComm.lastError,
     };
@@ -256,10 +277,12 @@ export function useSharedStateV2<T>({
   const isInitialized = useRef(false);
   const lastUpdateTime = useRef<number>(0);
 
-  // Get communication hooks
-  const parentComm =
-    isParent && iframeRef ? useParentCommunication(iframeRef, config) : null;
-  const childComm = !isParent ? useChildCommunication(config) : null;
+  // Always call both hooks at the top level
+  const parentComm = useParentCommunication(
+    (iframeRef ?? { current: null }) as React.RefObject<HTMLIFrameElement | null>,
+    config
+  );
+  const childComm = useChildCommunication(config);
 
   // Create unified communication interface
   const communication = createUnifiedCommunication(
@@ -312,7 +335,7 @@ export function useSharedStateV2<T>({
       const messageType = `SHARED_STATE_REQUEST_${key.toUpperCase()}`;
       const response = await communication.requestMessage(messageType, { key });
 
-      if (response && typeof response.value !== 'undefined') {
+      if (hasValueProp<T>(response)) {
         setLocalValue(response.value);
         setLastSync(Date.now());
       }
@@ -362,7 +385,7 @@ export function useSharedStateV2<T>({
       unsubscribeUpdate();
       unsubscribeRequest();
     };
-  }, [communication, key, value]);
+  }, [communication, key, value, parentComm, childComm]);
 
   /**
    * Initialize state on mount
