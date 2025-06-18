@@ -1,9 +1,9 @@
 # React Iframe Bridge
 
-[![npm version](https://badge.fury.io/js/react-iframe-bridge.svg)](https://badge.fury.io/js/react-iframe-bridge)
+[![npm version](https://badge.fury.io/js/react-iframes-bridge.svg)](https://badge.fury.io/js/react-iframes-bridge)
 [![TypeScript](https://img.shields.io/badge/%3C%2F%3E-TypeScript-%230074c1.svg)](http://www.typescriptlang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Downloads](https://img.shields.io/npm/dm/react-iframe-bridge.svg)](https://www.npmjs.com/package/react-iframe-bridge)
+[![Downloads](https://img.shields.io/npm/dm/react-iframes-bridge.svg)](https://www.npmjs.com/package/react-iframes-bridge)
 
 A comprehensive TypeScript library for secure, bidirectional communication between React parent applications and iframe content using the postMessage API.
 
@@ -22,11 +22,11 @@ A comprehensive TypeScript library for secure, bidirectional communication betwe
 ## 📦 Installation
 
 ```bash
-npm install react-iframe-bridge
+npm install react-iframes-bridge
 # or
-yarn add react-iframe-bridge
+yarn add react-iframes-bridge
 # or
-pnpm add react-iframe-bridge
+pnpm add react-iframes-bridge
 ```
 
 ## 🏗️ Quick Start
@@ -39,7 +39,7 @@ For production-grade iframe communication, we recommend separating your main app
 
 ```tsx
 import React, { useRef, useEffect, useState } from 'react';
-import { useParentCommunication } from 'react-iframe-bridge';
+import { useParentCommunication } from 'react-iframes-bridge';
 
 function ParentApp() {
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -89,7 +89,7 @@ function ParentApp() {
 
 ```tsx
 import React, { useEffect, useState } from 'react';
-import { useChildCommunication } from 'react-iframe-bridge';
+import { useChildCommunication } from 'react-iframes-bridge';
 
 function CheckoutApp() {
   const [cartData, setCartData] = useState(null);
@@ -205,7 +205,7 @@ const [sharedCart, setSharedCart] = useSharedState([], {
 Enhanced iframe component with built-in security features.
 
 ```tsx
-import { SecureIframe } from 'react-iframe-bridge';
+import { SecureIframe } from 'react-iframes-bridge';
 
 <SecureIframe
   src="https://checkout.myapp.com"
@@ -224,7 +224,7 @@ import { SecureIframe } from 'react-iframe-bridge';
 Context provider for global iframe bridge configuration.
 
 ```tsx
-import { IframeBridgeProvider } from 'react-iframe-bridge';
+import { IframeBridgeProvider } from 'react-iframes-bridge';
 
 const config = {
   allowedOrigins: ['https://trusted-domain.com'],
@@ -393,7 +393,7 @@ import {
   SecurityError, 
   TimeoutError, 
   ValidationError 
-} from 'react-iframe-bridge';
+} from 'react-iframes-bridge';
 
 // Handle specific error types
 useEffect(() => {
@@ -462,10 +462,10 @@ const config = {
 
 ```tsx
 import { render, screen } from '@testing-library/react';
-import { useParentCommunication } from 'react-iframe-bridge';
+import { useParentCommunication } from 'react-iframes-bridge';
 
 // Mock the iframe communication
-jest.mock('react-iframe-bridge');
+jest.mock('react-iframes-bridge');
 
 function TestComponent() {
   const iframeRef = useRef();
@@ -741,7 +741,7 @@ import IframeComm from 'react-iframe-comm';
 />
 
 // New way
-import { useParentCommunication } from 'react-iframe-bridge';
+import { useParentCommunication } from 'react-iframes-bridge';
 
 const parentComm = useParentCommunication(iframeRef, config);
 
